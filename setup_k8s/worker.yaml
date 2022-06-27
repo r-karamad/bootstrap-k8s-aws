@@ -1,0 +1,11 @@
+---
+
+- name: Join worker 
+  gather_facts: false
+  become: yes
+  hosts: k8s-worker
+  tasks:
+    - name: Copy join command to server location
+      copy: src=join-command dest=/tmp/join-command.sh mode=0777
+    - name: Join node to cluster
+      command: sh /tmp/join-command.sh

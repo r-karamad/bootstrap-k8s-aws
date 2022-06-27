@@ -1,0 +1,71 @@
+---
+
+- name: Bootstrap a k8s cluster
+  hosts: all
+  gather_facts: false
+  become: yes
+  tasks:
+    - name: Set hostname
+      hostname:
+        name: "{{ inventory_hostname }}"
+    - name: Update package lists
+      apt:
+        update_cache: yes
+    - name: Install dependencies
+      apt:
+        name: 
+          - apt-transport-https
+        state: present
+    - name: Add k8s apt-key
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+    - name: Add kubernetes apt repository
+      apt_repository:
+        repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: 'kubernetes'
+    - name: Update package lists
+      apt:
+        update_cache: yes
+    - name: Disable swap
+      shell: swapoff -a
+    - name: Disable swap from fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$' 
+        replace: '# \1'    
+    - name: Install docker.io
+      apt:
+        name: 
+          - docker.io
+        state: present
+    - name: Add ubuntu user to docker gorup
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+    - name: Restart docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted
+    - name: enable docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+    - name: apt-get update
+      apt:
+        update_cache: yes
+    - name: Install k8s packages
+      apt:
+        name: [kubelet,kubeadm,kubectl]
+        state: present
+        update_cache: true
+    - name: reload systemd
+      command: systemctl daemon-reload
+    - name: enable kubelet service
+      systemd:
+        name: kubelet
+        state: started
+        enabled: yes
